@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
 using QudraSaaS.Application;
 using QudraSaaS.Application.DTOs;
 using QudraSaaS.Application.Interfaces;
@@ -12,10 +14,12 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace QudraSaaS.Application.Services
 {
@@ -24,16 +28,20 @@ namespace QudraSaaS.Application.Services
         private readonly UserManager<applicationUser> _userManager;
         private readonly IConfiguration _config;
         public readonly Context context;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public UserRepo(UserManager<applicationUser> userManager, IConfiguration config, Context context)
+
+        public UserRepo(UserManager<applicationUser> userManager, IConfiguration config, Context context, IHttpContextAccessor httpContextAccessor)
         {
             _userManager = userManager;
             _config = config;
             this.context = context;
+            _httpContextAccessor = httpContextAccessor;
         }
 
-        public async Task<bool>AddUser(CustmerDTO registerUserDto)
+        public async Task<bool>AddUser(CustmerDTO registerUserDto /*ClaimsPrincipal userPrincipal*/)
         {
+          //  var user = await _userManager.GetUserAsync(userPrincipal);
             var exists = await context.Customers.AnyAsync(u => u.PhoneNumber == registerUserDto.phone);
             if (exists)
             {
@@ -45,20 +53,34 @@ namespace QudraSaaS.Application.Services
             app.phone = registerUserDto.phone;
             app.Email = registerUserDto.Email;
             app.whats = registerUserDto.whats;
-            app.workShopId = registerUserDto.workShopId;
+            app.workShopId = "1";//user.Id;
             app.RankId= registerUserDto.RankId;
-            app.Rank = registerUserDto.Rank;
-            app.numberOfVisits = registerUserDto.numberOfVisits;
-            app.notes = registerUserDto.notes;
+          //  app.Rank = registerUserDto.Rank;
+            app.numberOfVisits = registerUserDto.numberOfVisits=0;
+            app.notes = registerUserDto.notes;  
+            
             //app.cars = registerUserDto.carid;
             //app.serviceSessions = registerUserDto.ServiceSessionid;
-
-            context.Users.Add(app);
+            context.Customers.Add(app);
             await context.SaveChangesAsync();
-            return true;
+
+            IdentityResult result = await _userManager.CreateAsync(app, registerUserDto.phone);
+            if (result.Succeeded)
+            {
+                await _userManager.AddToRoleAsync(app,"Customer");
+
+                return true;
+
+
+            }
+            else {
+
+                throw new InvalidOperationException("An error occurred while registering the account.");
+            }
+         
+           
             
         }
-
         public async Task<List<CustmerDTO>> GetAll()
         {
             var cust=await context.Customers.ToListAsync();
@@ -76,13 +98,13 @@ namespace QudraSaaS.Application.Services
                 ca.notes = custmer.notes;
                 ca.RankId = custmer.RankId;
                 ca.workShopId = custmer.workShopId;
-                ca.cars = custmer.cars;
-                ca.serviceSessions = custmer.serviceSessions;
+                
+       
+                
                 custmerdto.Add(ca);
             }
             return custmerdto;
         }
-
         public async Task<CustmerDTO>GetbyId(string id)
         {
             var user = await context.Customers.FirstOrDefaultAsync(x => x.Id == id);
@@ -98,34 +120,31 @@ namespace QudraSaaS.Application.Services
             custmerDTO.notes = user.notes;
             custmerDTO.RankId = user.RankId;
             custmerDTO.workShopId = user.workShopId;
-            custmerDTO.cars = user.cars;
-            custmerDTO.serviceSessions = user.serviceSessions;
+       
             return custmerDTO;
 
         }
-
         public async Task<bool> Update(CustmerDTO registerUserDto,string Id)
         {
+            // 1️⃣ استخراج الـ UserId من التوكن الحالي
+            var userIdFromToken = _httpContextAccessor.HttpContext?.User?
+                .FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(userIdFromToken))
+                throw new UnauthorizedAccessException("Token is missing or invalid.");
+
+            // 2️⃣ التحقق إن المستخدم اللي في التوكن هو نفسه اللي بيعدّل
+            if (userIdFromToken != Id)
+                throw new UnauthorizedAccessException("You are not allowed to update another user's data.");
+
+
+
             var user= await context.Customers.FirstOrDefaultAsync(x=>x.Id == Id);
             if (user == null)
                 throw new InvalidOperationException($"The ServiceSession With Id:{Id} Not found");
-            if (registerUserDto.whats != null)
-                user.whats = registerUserDto.whats;
-
+ 
             if (registerUserDto.name != null)
-                user.name = registerUserDto.name;
-
-            if (registerUserDto.Email != null)
-                user.Email = registerUserDto.Email;
-
-            if (registerUserDto.phone != null)
-                user.phone = registerUserDto.phone;
-
-            if (registerUserDto.RankId != null)
-                user.RankId = registerUserDto.RankId;
-
-            if (registerUserDto.numberOfVisits != null)
-                user.numberOfVisits = registerUserDto.numberOfVisits;
+                user.name = registerUserDto.name;        
 
             if (registerUserDto.notes != null)
                 user.notes = registerUserDto.notes;
@@ -133,20 +152,19 @@ namespace QudraSaaS.Application.Services
             if (registerUserDto.workShopId != null)
                 user.workShopId = registerUserDto.workShopId;
 
-            if (registerUserDto.cars != null)
-                user.cars = registerUserDto.cars;
+            //if (registerUserDto.carlist != null)
+            //    user.cars = registerUserDto.carlist;
 
-            if (registerUserDto.serviceSessions != null)
-                user.serviceSessions = registerUserDto.serviceSessions;
+            //if (registerUserDto.serviceSessions != null)
+            //    user.serviceSessions = registerUserDto.serviceSessions;
 
             await context.SaveChangesAsync();
             return true;
         }
-
         public async Task<bool> ChangePassword(ChangePasswordDto changePasswordDto, ClaimsPrincipal userPrincipal)
         {
             var user = await _userManager.GetUserAsync(userPrincipal);
-            if(user == null)
+            if (user == null)
             {
                 throw new InvalidOperationException("User Not Found");
             }
@@ -158,7 +176,6 @@ namespace QudraSaaS.Application.Services
             }
             return true;
         }
-
         public async Task<bool>ResetPassword(ResetPasswordDTO resetPasswordDTO)
         {
             var user = await _userManager.Users.FirstOrDefaultAsync(x => x.phone == resetPasswordDTO.phone);
@@ -179,5 +196,39 @@ namespace QudraSaaS.Application.Services
             await context.SaveChangesAsync();
             return true;
         }
+
+        public async Task<string> loginUser(LoginCustumerDTO loginDto)
+        {
+            var work = await context.Customers.FirstOrDefaultAsync(u => u.phone == loginDto.phone);
+            if (work == null)
+            {
+                throw new InvalidOperationException("The User is not registered.");
+            }
+            bool passwordValid = await _userManager.CheckPasswordAsync(work, loginDto.Password);
+            if (!passwordValid)
+                throw new InvalidOperationException("Invalid password...!");
+            var roles = await _userManager.GetRolesAsync(work);
+            if (!roles.Contains("User"))//عاوز اتاكد
+                throw new InvalidOperationException("You are not a user");
+            var claims = new List<Claim>
+        {
+            new Claim("phone", work.phone),
+            new Claim(ClaimTypes.NameIdentifier, work.Id.ToString()),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+        };
+            foreach (var role in roles)
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["JWT:Secret"]));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            var token = new JwtSecurityToken(
+                issuer: _config["JWT:ValidIssuer"],
+                audience: _config["JWT:ValidAudiance"],
+                claims: claims,
+                expires: DateTime.UtcNow.AddDays(30),
+                signingCredentials: creds
+            );
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
     }
 }

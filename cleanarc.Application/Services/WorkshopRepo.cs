@@ -109,7 +109,7 @@ namespace QudraSaaS.Application.Services
             if (!passwordValid)
                 throw new InvalidOperationException("Invalid password...!");
             var roles = await _userManager.GetRolesAsync(work);
-            if (!roles.Contains("User"))//عاوز اتاكد
+            if (!roles.Contains("workshop"))//عاوز اتاكد
                 throw new InvalidOperationException("You are not a user");
             var claims = new List<Claim>
         {

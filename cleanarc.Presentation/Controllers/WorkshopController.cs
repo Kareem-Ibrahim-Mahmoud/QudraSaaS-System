@@ -81,7 +81,7 @@ namespace QudraSaaS.Presentation.Controllers
         }
 
 
-        [HttpPost("Login")]
+        [HttpPost("LoginWorkShop")]
         public async Task<IActionResult> Login(LoginWorkshopDto dto)
         {
             if (!ModelState.IsValid)

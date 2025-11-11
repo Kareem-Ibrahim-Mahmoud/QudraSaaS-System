@@ -1,4 +1,5 @@
 
+using Castle.Core.Smtp;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -20,12 +21,16 @@ builder.Services.AddSwaggerGen();
 
 
 builder.Services.AddDbContext<Context>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
+    options.UseSqlServer(builder.Configuration.GetConnectionString(@"Data source=.;Initial catalog=QudraSaaSDatabase;Integrated security=true;TrustServerCertificate=true;"))
 );
 
 builder.Services.AddIdentity<applicationUser, IdentityRole>()
     .AddEntityFrameworkStores<Context>()
     .AddDefaultTokenProviders();
+
+builder.Services.AddScoped<
+    Microsoft.AspNetCore.Identity.UI.Services.IEmailSender,
+    QudraSaaS.Application.Services.EmailSender>();
 
 builder.Services.AddScoped<ICar, CarRepo>();
 builder.Services.AddScoped<IRank, RankRepo>();

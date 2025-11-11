@@ -21,29 +21,61 @@ namespace QudraSaaS.Presentation.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await Icar.Creat(carDTO);
-
-            if (result)
-                return Ok(new
+            try
+            {
+                if (await Icar.Creat(carDTO))
                 {
-                    success = "true",
-                    message = "CAR added successfully"
-                });
-            else
+                    return Ok(new
+                    {
+                        success = "true",
+                        message = "Account Car successfully"
+                    });
+                }
+                else
+                {
+                    return BadRequest(new
+                    {
+                        success = "false",
+                        message = "NOT to add Car"
+                    });
+                }
+            }
+            catch (InvalidOperationException ex)
+            {
                 return BadRequest(new
                 {
-                    success = "false",
-                    message = "NOT to add Car"
+                    success = "False",
+                    message = ex.Message
                 });
+            }
         }
         [HttpGet("GetCarById")]
         public async Task<IActionResult> GetCarId(int Id)
         {
             if (ModelState.IsValid)
             {
-                return Ok(await Icar.GetbyId(Id));
+                try
+                {
+                    return Ok(new
+                    {
+                        success = "true",
+                        message = await Icar.GetbyId(Id)
+                    });
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return BadRequest(new
+                    {
+                        success = "False",
+                        message = ex.Message
+                    });
+                }
             }
-            return BadRequest(ModelState);
+            return BadRequest(new
+            {
+                success = "False",
+                message = ModelState
+            });
         }
 
         [HttpGet("GetAllCars")]
@@ -51,9 +83,28 @@ namespace QudraSaaS.Presentation.Controllers
         {
             if (ModelState.IsValid)
             {
-                return Ok(await Icar.GetAll());
+                try
+                {
+                    return Ok(new
+                    {
+                        success = "true",
+                        message = await Icar.GetAll()
+                    });
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return BadRequest(new
+                    {
+                        success = "False",
+                        message = ex.Message
+                    });
+                }
             }
-            return BadRequest(ModelState);
+            return BadRequest(new
+            {
+                success = "False",
+                message = ModelState
+            });
         }
 
         [HttpDelete("DeleteCar")]

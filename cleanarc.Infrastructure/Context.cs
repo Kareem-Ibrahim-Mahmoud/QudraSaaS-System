@@ -6,6 +6,12 @@ namespace QudraSaaS.Infrastructure
 {
     public class Context: IdentityDbContext<applicationUser>
     {
+        public Context(DbContextOptions<Context> options):base(options) 
+        { 
+        
+        
+        } 
+       
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             //local Database

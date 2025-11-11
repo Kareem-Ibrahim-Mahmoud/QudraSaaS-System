@@ -11,10 +11,11 @@ namespace QudraSaaS.Application.Interfaces
     public interface IUser
     {
         public  Task<List<CustmerDTO>> GetAll();
-        public  Task<bool> AddUser(CustmerDTO registerUserDto);
+        public  Task<bool> AddUser(CustmerDTO registerUserDto/*,ClaimsPrincipal userPrincipal*/);
         public  Task<CustmerDTO> GetbyId(string id);
         public  Task<bool> Update(CustmerDTO registerUserDto, string Id);
         public  Task<bool> ChangePassword(ChangePasswordDto changePasswordDto, ClaimsPrincipal userPrincipal);
         public  Task<bool> ResetPassword(ResetPasswordDTO resetPasswordDTO);
+        public Task<string> loginUser(LoginCustumerDTO loginDto);
     }
 }

@@ -20,7 +20,9 @@ namespace QudraSaaS.Application.DTOs
         //------------------------------
         public int RankId { get; set; }
         public string workShopId { get; set; }
-        public ICollection<Car> cars { get; set; }
-        public ICollection<ServiceSession> serviceSessions { get; set; }
+        //public ICollection<Car> cars { get; set; }
+        public List<int>? carlistid { get; set; }= new List<int>();
+        public List<int>? serviceSessionslistId { get; set; } = new List<int>();
+        //public ICollection<ServiceSession> serviceSessions { get; set; }
     }
 }
