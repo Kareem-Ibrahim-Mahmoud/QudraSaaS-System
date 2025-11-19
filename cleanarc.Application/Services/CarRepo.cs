@@ -55,8 +55,9 @@ namespace QudraSaaS.Application.Services
             cardto.serviceSessions = car.serviceSessions;
             return cardto;
         }
-        public async Task<bool>Creat(CarDTO cardto)
+        public async Task<bool>Creat(CarDTO cardto/*ClaimsPrincipal userPrincipal*/)
         {
+            //  var user = await _userManager.GetUserAsync(userPrincipal);
             var car = new Car();
             car.Year = cardto.Year;
             car.CarModel = cardto.CarModel;
